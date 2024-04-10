@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:13
+        image: postgres:13.10
         env:
           POSTGRES_DB: foodgram
           POSTGRES_USER: foodgram_user
@@ -37,6 +37,8 @@ jobs:
         DB_PORT: 5432        
       run: |
         python -m flake8 backend/
+        cd backend/
+        python manage.py test
 
   build_backend_and_push_to_docker_hub:
     name: Push backend Docker image to DockerHub
@@ -84,7 +86,6 @@ jobs:
   build_gateway_and_push_to_docker_hub:
     name: Push gateway Docker image to DockerHub
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
     steps:
       - name: Check out the repo
         uses: actions/checkout@v3
