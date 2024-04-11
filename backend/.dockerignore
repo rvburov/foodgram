@@ -1,0 +1,14 @@
+# Django stuff:
+db.sqlite3
+
+# Environments
+env
+.git
+.env
+
+# Папки, создаваемые средой разработки
+.idea
+.vscode
+
+README.md
+Dockerfile
