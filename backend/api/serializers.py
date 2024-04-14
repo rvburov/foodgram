@@ -155,7 +155,9 @@ class SubscriptionReadSerializer(CustomUserSerializer):
     def get_recipes(self, obj):
         """Получение списка рецептов пользователя с учетом ограничения."""
         request = self.context['request']
-        limit = request.GET['recipes_limit'] if 'recipes_limit' in request.GET else None
+        limit = request.GET[
+            'recipes_limit'
+        ] if 'recipes_limit' in request.GET else None
         recipes = obj.recipes.all()
         if limit:
             recipes = recipes[: int(limit)]
@@ -234,7 +236,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 f'Ингредиент с идентификатором {ingredient_id} не существует.',
                 code='invalid'
             )
-        
+
     def process_ingredients_data(self, instance, ingredients_data):
         """Обработка данных об ингредиентах."""
         ingredients_to_create = []
