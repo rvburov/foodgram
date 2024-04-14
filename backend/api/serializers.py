@@ -2,7 +2,6 @@ from django.db import transaction
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework.fields import SerializerMethodField
-
 from drf_extra_fields.fields import Base64ImageField
 from djoser.serializers import UserCreateSerializer, UserSerializer
 
@@ -155,8 +154,8 @@ class SubscriptionReadSerializer(CustomUserSerializer):
 
     def get_recipes(self, obj):
         """Получение списка рецептов пользователя с учетом ограничения."""
-        request = self.context.get('request')
-        limit = request.GET.get('recipes_limit')
+        request = self.context['request']
+        limit = request.GET['recipes_limit'] if 'recipes_limit' in request.GET else None
         recipes = obj.recipes.all()
         if limit:
             recipes = recipes[: int(limit)]
@@ -235,6 +234,21 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 f'Ингредиент с идентификатором {ingredient_id} не существует.',
                 code='invalid'
             )
+        
+    def process_ingredients_data(self, instance, ingredients_data):
+        """Обработка данных об ингредиентах."""
+        ingredients_to_create = []
+        for ingredient_data in ingredients_data:
+            ingredient_id = ingredient_data.get('id')
+            ingredient = self.get_ingredient_or_raise_400(ingredient_id)
+            ingredients_to_create.append(
+                RecipeIngredient(
+                    recipe=instance,
+                    ingredient=ingredient,
+                    amount=ingredient_data['amount']
+                )
+            )
+        RecipeIngredient.objects.bulk_create(ingredients_to_create)
 
     def create(self, validated_data):
         """Создание нового рецепта."""
@@ -244,18 +258,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             recipe = Recipe.objects.create(author=user, **validated_data)
             recipe.tags.set(tags_data)
-            ingredients_to_create = []
-            for ingredient_data in ingredients_data:
-                ingredient_id = ingredient_data.get('id')
-                ingredient = self.get_ingredient_or_raise_400(ingredient_id)
-                ingredients_to_create.append(
-                    RecipeIngredient(
-                        recipe=recipe,
-                        ingredient=ingredient,
-                        amount=ingredient_data['amount']
-                    )
-                )
-            RecipeIngredient.objects.bulk_create(ingredients_to_create)
+            self.process_ingredients_data(recipe, ingredients_data)
         return recipe
 
     def update(self, instance, validated_data):
@@ -265,18 +268,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             instance.recipes_ingredients.all().delete()
             instance.tags.set(tags_data)
-            ingredients_to_create = []
-            for ingredient_data in ingredients_data:
-                ingredient_id = ingredient_data.get('id')
-                ingredient = self.get_ingredient_or_raise_400(ingredient_id)
-                ingredients_to_create.append(
-                    RecipeIngredient(
-                        recipe=instance,
-                        ingredient=ingredient,
-                        amount=ingredient_data['amount']
-                    )
-                )
-            RecipeIngredient.objects.bulk_create(ingredients_to_create)
+            self.process_ingredients_data(instance, ingredients_data)
         return super().update(instance, validated_data)
 
     def to_representation(self, instance):
