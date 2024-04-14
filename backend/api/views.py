@@ -4,7 +4,6 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 
-
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -87,9 +86,7 @@ class CustomUserViewSet(UserViewSet):
         """Подписка на пользователя."""
         user = request.user
         author = get_object_or_404(User, id=id)
-        if user == author:
-            raise ValidationError('Нельзя подписаться на самого себя!')
-        if Follow.objects.filter(user=user, author=author).exists():
+        if user.follower.filter(author=author).exists():
             raise ValidationError("Вы уже подписаны на этого автора")
         serializer = SubscriptionSerializer(
             data={'user': user.id, 'author': author.id},
@@ -106,7 +103,7 @@ class CustomUserViewSet(UserViewSet):
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         user = request.user
         author = get_object_or_404(User, id=id)
-        if not Follow.objects.filter(user=user, author=author).exists():
+        if not user.follower.filter(author=author).exists():
             raise ValidationError("Подписка не найдена")
         subscription = get_object_or_404(Follow, user=user, author=author)
         subscription.delete()
@@ -157,7 +154,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 'Рецепт не найден в избранном!',
                 code=status.HTTP_400_BAD_REQUEST
             )
-        if Favorite.objects.filter(user=user, recipe=recipe).exists():
+        if user.favorites.filter(recipe=recipe).exists():
             raise ValidationError('Рецепт уже добавлен в избранное!')
         serializer = FavoriteSerializer(
             data={'user': user.pk, 'recipe': recipe.pk},
@@ -173,10 +170,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         recipe = get_object_or_404(Recipe, id=pk)
-        if not Favorite.objects.filter(
-            user=request.user,
-            recipe=recipe
-        ).exists():
+        if not request.user.favorites.filter(recipe=recipe).exists():
             raise ValidationError('Рецепта нет в избранном!')
         deleted_favorites = get_object_or_404(
             Favorite,
@@ -201,7 +195,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 "Рецепт не найден в списоке покупок!",
                 code=status.HTTP_400_BAD_REQUEST
             )
-        if ShoppingCart.objects.filter(user=user, recipe=recipe).exists():
+        if user.shopping_cart.filter(recipe=recipe).exists():
             raise ValidationError("Рецепт уже добавлен в списоке покупок!")
         serializer = ShoppingCartSerializer(
             data={'user': user.pk, 'recipe': recipe.pk},
@@ -217,17 +211,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         recipe = get_object_or_404(Recipe, id=pk)
-        if not ShoppingCart.objects.filter(
-            user=request.user,
-            ecipe=recipe
-        ).exists():
+        if not request.user.shopping_cart.filter(recipe=recipe).exists():
             raise ValidationError('Рецепта нет в списке покупок!')
-        deleted_favorites = get_object_or_404(
+        deleted_cart_item = get_object_or_404(
             ShoppingCart,
             user=request.user,
             recipe=recipe
         )
-        deleted_favorites.delete()
+        deleted_cart_item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, permission_classes=(IsAuthenticated,))
