@@ -55,12 +55,3 @@ Foodgram - это сервис, который позволяет пользов
    docker-compose -f docker-compose.production.yml exec backend python manage.py createsuperuser
    ```
 
-## Проект на сервере
-
-Проект доступен по следующей ссылке: [Foodgram](https://foodgramrecipe.hopto.org)
-
-## Автор
-
-Автор проекта - **Роман Буров**.
-
-Telegram: romanburov
